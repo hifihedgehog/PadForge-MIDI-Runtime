@@ -1,0 +1,18 @@
+<Project Sdk="WixToolset.Sdk/5.0.2">
+  <!--
+    dotnet build installer\PadForgeMidiRuntime.wixproj -c Release -p:Platform=x64
+        -p:BinDir=<folder with the runtime DLL, PRI and WinMD>
+        -p:VcRuntimeMinVersion=<major.minor of the linker that built the DLL>
+    Platform is x64 or ARM64. build\build.ps1 passes all of this.
+  -->
+  <PropertyGroup>
+    <ProductVersion Condition="'$(ProductVersion)' == ''">1.0.17.25</ProductVersion>
+    <DocsDir Condition="'$(DocsDir)' == ''">$(MSBuildThisFileDirectory)..</DocsDir>
+    <OutputName>PadForge-MIDI-Runtime-$(Platform)</OutputName>
+    <DefineConstants>ProductVersion=$(ProductVersion);BinDir=$(BinDir);DocsDir=$(DocsDir);VcRuntimeMinVersion=$(VcRuntimeMinVersion)</DefineConstants>
+    <!-- ICE61 flags AllowSameVersionUpgrades, which is deliberate: a repackaged
+         build of the same runtime version has to replace the earlier one. -->
+    <SuppressIces>ICE61</SuppressIces>
+  </PropertyGroup>
+</Project>
+

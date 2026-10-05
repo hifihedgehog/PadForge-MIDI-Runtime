@@ -1,0 +1,89 @@
+<Wix xmlns="http://wixtoolset.org/schemas/v4/wxs">
+
+  <!--
+    Derived from microsoft/MIDI rc-4,
+    src/app-sdk/sdk-runtime-installer/sdk-package/WindowsMidiServicesSdkRedist.wxs.
+    The runtime files, their self-registration and the "Installed" registry
+    value match Microsoft's package. The diagnostic tools, the log-collection
+    scripts and the PDB are left out. The package has its own name, folder and
+    upgrade code, so it never presents itself as Microsoft's.
+  -->
+
+  <Package
+      Name="Windows MIDI Services App SDK Runtime $(var.Platform) (PadForge build)"
+      Manufacturer="PadForge"
+      Version="$(var.ProductVersion)"
+      UpgradeCode="5c4b95b9-c1d9-4c00-8454-71560dda7106"
+      Scope="perMachine">
+
+    <MajorUpgrade AllowSameVersionUpgrades="yes"
+                  DowngradeErrorMessage="A newer build of this runtime is already installed." />
+
+    <MediaTemplate EmbedCab="yes" />
+
+    <Property Id="ARPURLINFOABOUT" Value="https://github.com/hifihedgehog/PadForge-MIDI-Runtime" />
+    <Property Id="ARPCOMMENTS" Value="Built from microsoft/MIDI rc-4 under the MIT License." />
+    <Property Id="ARPNOMODIFY" Value="1" />
+
+    <!-- Microsoft's own package of this runtime. Both would own the one
+         "Installed" value below, so this package does not install beside it. -->
+    <Upgrade Id="297714bb-dd77-4748-a4c1-553ad66da5d0">
+      <UpgradeVersion OnlyDetect="yes" Minimum="0.0.0" IncludeMinimum="yes"
+                      Property="MICROSOFTRUNTIMEFOUND" />
+    </Upgrade>
+    <Launch Condition="Installed OR NOT MICROSOFTRUNTIMEFOUND"
+            Message="Microsoft's Windows MIDI Services App SDK Runtime is already installed on this PC. Apps use it as it is." />
+
+    <!-- The DLL links the Visual C++ runtime dynamically, as Microsoft builds
+         it, and its DllRegisterServer cannot run without it. The installed
+         runtime must be at least as new as the linker that built the DLL,
+         which build.ps1 reads from the DLL. The x64 redistributable carries
+         the ARM64 files as well. -->
+    <Property Id="VCRUNTIMEFOUND">
+      <DirectorySearch Id="VcRuntimeFolder" Path="[System64Folder]" Depth="0">
+        <FileSearch Name="msvcp140.dll" MinVersion="$(var.VcRuntimeMinVersion).0.0" />
+      </DirectorySearch>
+    </Property>
+    <Launch Condition="Installed OR VCRUNTIMEFOUND"
+            Message="This runtime needs the Microsoft Visual C++ Redistributable $(var.VcRuntimeMinVersion) or later. Install it from https://aka.ms/vc14/vc_redist.x64.exe and run this setup again." />
+
+    <StandardDirectory Id="ProgramFiles64Folder">
+      <Directory Id="SDK_INSTALLFOLDER" Name="PadForge MIDI Runtime" />
+    </StandardDirectory>
+
+    <Component Id="AppSdkRuntime"
+               Directory="SDK_INSTALLFOLDER"
+               Bitness="always64"
+               Guid="6389a7d9-57a2-436d-9d1f-23c437689d86">
+      <File Source="$(var.BinDir)\Microsoft.Windows.Devices.Midi2.dll" KeyPath="yes" Vital="yes" SelfRegCost="1" />
+      <File Source="$(var.BinDir)\Microsoft.Windows.Devices.Midi2.pri" />
+      <File Source="$(var.BinDir)\Microsoft.Windows.Devices.Midi2.winmd" Vital="yes" />
+    </Component>
+
+    <!-- The runtime finds its folder through this value
+         (MIDI_ROOT_APP_SDK_REG_KEY in src/api/inc/MidiDefs.h). -->
+    <Component Id="AppSdkRuntimeRegistry"
+               Directory="SDK_INSTALLFOLDER"
+               Bitness="always64"
+               Guid="e25b08a1-7297-46d6-9c2c-6ee64819fc29">
+      <RegistryKey Root="HKLM" Key="SOFTWARE\Microsoft\Windows MIDI Services\Desktop App SDK Runtime">
+        <RegistryValue Type="string" Name="Installed" Value="[SDK_INSTALLFOLDER]" KeyPath="yes" />
+      </RegistryKey>
+    </Component>
+
+    <Component Id="Notices"
+               Directory="SDK_INSTALLFOLDER"
+               Bitness="always64"
+               Guid="7cbd3da9-5084-4bc5-8553-e9524e4122cc">
+      <File Source="$(var.DocsDir)\LICENSE" Name="LICENSE.txt" KeyPath="yes" />
+      <File Source="$(var.DocsDir)\THIRD-PARTY-NOTICES.txt" />
+    </Component>
+
+    <Feature Id="Runtime">
+      <ComponentRef Id="AppSdkRuntime" />
+      <ComponentRef Id="AppSdkRuntimeRegistry" />
+      <ComponentRef Id="Notices" />
+    </Feature>
+
+  </Package>
+</Wix>
